@@ -78,6 +78,9 @@ import org.projectfloodlight.openflow.util.LRULinkedHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+// FIX MADE BY SAIM SALMAN.	
+import net.floodlightcontroller.util.FlowModUtils;
+
 // paag: with IControllerCompletionListener that logswhen an input event has been consumed
 public class LearningSwitch
 implements IFloodlightModule, ILearningSwitchService, IOFMessageListener, IControllerCompletionListener {
@@ -104,7 +107,7 @@ implements IFloodlightModule, ILearningSwitchService, IOFMessageListener, IContr
 	public static final long LEARNING_SWITCH_COOKIE = (long) (LEARNING_SWITCH_APP_ID & ((1 << APP_ID_BITS) - 1)) << APP_ID_SHIFT;
 
 	// more flow-mod defaults
-	protected static short FLOWMOD_DEFAULT_IDLE_TIMEOUT = 5; // in seconds
+	protected static short FLOWMOD_DEFAULT_IDLE_TIMEOUT = 100; // in seconds
 	protected static short FLOWMOD_DEFAULT_HARD_TIMEOUT = 0; // infinite
 	protected static short FLOWMOD_PRIORITY = 100;
 
@@ -275,7 +278,7 @@ implements IFloodlightModule, ILearningSwitchService, IOFMessageListener, IContr
 		// and port, max_len are arguments to this constructor
 		List<OFAction> al = new ArrayList<OFAction>();
 		al.add(sw.getOFFactory().actions().buildOutput().setPort(outPort).setMaxLen(0xffFFffFF).build());
-		fmb.setActions(al);
+		FlowModUtils.setActions(fmb, al, sw);
 
 		if (log.isTraceEnabled()) {
 			log.trace("{} {} flow mod {}",

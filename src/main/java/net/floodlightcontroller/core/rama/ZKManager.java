@@ -53,7 +53,8 @@ public class ZKManager {
 	private final static Logger log = LoggerFactory.getLogger(ZKManager.class);
 
 	/** Performs some asserts to validate code execution **/
-	private final static boolean validate = false;
+	// SAIM: Removed this variable.
+	// private final static boolean validate = false;
 
 	/** Strings to be used in ZK **/
 
@@ -105,6 +106,7 @@ public class ZKManager {
 
 	/**
 	 * Object to be used as mutex in critical zones with synchronized block
+	 * SAIM: Mostly used where the Floodlight instance connects to the ZK.
 	 */
 	private final Object mutex = new Object();
 
@@ -1035,15 +1037,15 @@ public class ZKManager {
 		// get the id of the controller who is master for this switch
 		if (!updateLeadershipFromZK(swId))
 			return false;
-		if (validate) {
-			int masterCount = 0;
-			for (String controller : leadership.keySet()) {
-				if (leadership.get(controller).contains(swId)) {
-					masterCount++;
-				}
-			}
-			assert (masterCount == 1);
-		}
+		// if (validate) { # SAIM: Removed this chunk of code.
+		// 	int masterCount = 0;
+		// 	for (String controller : leadership.keySet()) {
+		// 		if (leadership.get(controller).contains(swId)) {
+		// 			masterCount++;
+		// 		}
+		// 	}
+		// 	assert (masterCount == 1);
+		// }
 
 		// set event watcher to receive updates from master
 		if (leaveEventWatcher)
@@ -1158,6 +1160,8 @@ public class ZKManager {
 			log.warn("Switch with id " + swId + " already exists.");
 			return false;
 		}
+
+		log.info("SAIM SALMAN: START ADDING SWITCH ...");
 
 		boolean master = true;
 
@@ -1425,6 +1429,7 @@ public class ZKManager {
 		}
 	}
 
+	// SAIM: Do not use this for experiments as running ZooKeeper on same machine.
 	private class ZKSubmitter implements Runnable {
 
 		private final Object eventListLock = new Object();
@@ -1677,7 +1682,15 @@ public class ZKManager {
 					processOkMultiReply(opResults);
 				} else {
 					StringBuilder sb = new StringBuilder("[");
+
+					// FIX ADDED BY SAIM SALMAN.
+					if (opResults == null) return;
+
 					for (OpResult or : opResults) {
+						// FIX ADDED BY SAIM SALMAN.
+
+						// if (or == null) continue;
+
 						sb.append("type="+or.getType());
 						if (or instanceof CreateResult) {
 							CreateResult cr = (CreateResult) or;
@@ -2035,7 +2048,8 @@ public class ZKManager {
 		}
 
 		if (re == null) {
-			log.warn("Ignoring event could not deserialize data to event.", eId);
+			// SAIM SALMAN: TOO MUCH PRINTING!
+			// log.warn("Ignoring event could not deserialize data to event.", eId);
 			return;
 		}
 		if (!re.isProcessed()) {
@@ -2054,7 +2068,8 @@ public class ZKManager {
 				updateEventNode(eId);
 			}
 		} else {
-			log.info("Event " + eId + " from ZK is already processed - good.");
+			// SAIM SALMAN: REDUCE PRINTING
+			// log.info("Event " + eId + " from ZK is already processed - good.");
 		}
 	}
 
@@ -2263,9 +2278,10 @@ public class ZKManager {
 				// this can happen if the master replicated one or
 				// more events before/while we are receiving the
 				// event from the switch
-				log.warn("## Slave did not have the replicated event "
-						+ "in his buffer. Scheduling remove. Event: {}",
-						re.getId());
+				// SAIM SALMAN: TOO MUCH PRINTING
+				// log.warn("## Slave did not have the replicated event "
+						// + "in his buffer. Scheduling remove. Event: {}",
+						// re.getId());
 				getSwitchBuffer().ignoreNextEvent(re);
 			}
 		}

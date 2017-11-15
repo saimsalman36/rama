@@ -762,36 +762,40 @@ public class EventReplication implements IFloodlightModule, IOFSwitchListener,
 	/**************************************************************************/
 
 	@Override
-	public void switchAdded(DatapathId switchId) {
+	public void switchAdded(DatapathId switchId) { // SAIM: Read
 		log.info("Switch Added: {}", switchId.toString());
 	}
 
 	@Override
-	public void switchRemoved(DatapathId switchId) {
+	public void switchRemoved(DatapathId switchId) { // SAIM: Read
 		zk.removeSwitch(switchId);
 	}
 
 	@Override
-	public void switchActivated(DatapathId switchId) {
+	public void switchActivated(DatapathId switchId) { // SAIM: Read
 
 		log.info("Switch Activated: {}", switchId.toString());
 
 		IOFSwitch temp = switchService.getSwitch(switchId);
 		// fix to a problem where switchService.getSwitch(switchId) would
 		// return null
-		int sleep = 100;
-		while ((temp == null || !temp.isActive()) && sleep <= 2000) {
-			try {
-				Thread.sleep(sleep);
-				sleep += 100;
-				temp = switchService.getSwitch(switchId);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-		}
+
+		// Saim: Removed Chunk of Code.
+		// int sleep = 100;
+		// while ((temp == null || !temp.isActive()) && sleep <= 2000) {
+		// 	try {
+		// 		Thread.sleep(sleep);
+		// 		sleep += 100;
+		// 		temp = switchService.getSwitch(switchId);
+		// 	} catch (InterruptedException e) {
+		// 		e.printStackTrace();
+		// 	}
+		// }
+		// Saim: Removed Chunk of Code.
 
 		if (temp == null) {
 			log.error("switchActivated: could not get IOFSwitch from switchService");
+			System.exit(0);
 			return;
 		}
 
@@ -848,9 +852,9 @@ public class EventReplication implements IFloodlightModule, IOFSwitchListener,
 
 	private static final String availableCommands = "\tzk log" + "\n\tzk sw"
 			+ "\n\tzk buf" + "\n\tzk order"
-			+ "\n\tzk status\n\tbundles\n\tperformance\n\tconfig";
+			+ "\n\tzk status\n\tbundles\n\tperformance\n\tconfig\n\texit";
 
-	private void startScannerThread() {
+	private void startScannerThread() { // SAIM: READ
 		new Thread(new Runnable() {
 			@Override
 			public void run() {

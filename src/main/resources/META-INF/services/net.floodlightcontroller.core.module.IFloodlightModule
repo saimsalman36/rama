@@ -30,3 +30,4 @@ net.floodlightcontroller.statistics.StatisticsCollector
 net.floodlightcontroller.routing.RoutingManager
 net.floodlightcontroller.core.rama.EventReplication
 net.floodlightcontroller.core.rama.BundleManager
+net.floodlightcontroller.scl.SCL

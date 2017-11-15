@@ -622,6 +622,8 @@ public class TopologyInstance {
                 log.debug("Cost: {}", cost);
                 log.debug("Neighbor cost: {}", cost.get(neighbor));
 
+                if (cost.get(neighbor) == null) continue;
+
                 if (ndist < cost.get(neighbor)) {
                     cost.put(neighbor, ndist);
                     nexthoplinks.put(neighbor, link);

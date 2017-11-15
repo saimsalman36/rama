@@ -879,6 +879,7 @@ public class OFSwitch implements IOFSwitchBackend {
 					msgList, validMsgs, invalidMsgs });
 		}
 
+		// Saim: Additional Code
 		if (isActive() && switchManager.getBundleService() != null /*&& 
 			this.getOFFactory().getVersion().compareTo(OFVersion.OF_14) >= 0*/) {
 			
@@ -889,12 +890,14 @@ public class OFSwitch implements IOFSwitchBackend {
 
 			// write messages, that modify the switch, will go to the bundle
 			if (writeMsgs.size() > 0) {
+				// log.warn("SAIM: Adding messages to bundle");
 				addToCurrentBundle(writeMsgs, conn);
 			}
 
 			// read (and master/slave valid) msgs can be sent now
 			validMsgs = readMsgs;
 		}
+		// Saim: Additional Code
 
 		/* Try to write all valid messages */
 		Collection<OFMessage> unsent = conn.write(validMsgs);
@@ -924,6 +927,8 @@ public class OFSwitch implements IOFSwitchBackend {
 			return ret;
 		}
 	}
+
+	// Saim: Additional Functions
 
 	/**
 	 * 
@@ -968,6 +973,8 @@ public class OFSwitch implements IOFSwitchBackend {
 			}
 		}
 	}
+
+	// Saim: Additional Functions
 
 	@Override
 	public OFConnection getConnectionByCategory(LogicalOFMessageCategory category){

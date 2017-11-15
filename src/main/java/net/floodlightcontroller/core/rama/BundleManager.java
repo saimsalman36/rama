@@ -79,6 +79,9 @@ public class BundleManager implements IBundleService, IFloodlightModule {
 
 	private IFloodlightProviderService floodlightProvider;
 
+	private static Map<IOFConnection, List<OFMessage>> initMessages = new HashMap<IOFConnection, List<OFMessage>>();
+
+
 	/**
 	 * Sets the id of the current event being processed in the current thread
 	 * 
@@ -115,9 +118,20 @@ public class BundleManager implements IBundleService, IFloodlightModule {
 		}
 
 		if (!replicationService.isConnected(swId)) {
-			log.info("Not sending msgs in bundle because switch not fully connected yet");
-			return conn.write(msgs);
+			// log.info("NOT CONNECTED: " + OFBundle.getMsgTypes(msgs));
+
+			if (initMessages.get(conn) == null) {
+				initMessages.put(conn, msgs);
+			} else {
+				initMessages.get(conn).addAll(msgs);
+			}
+
+			return Collections.emptyList();
+			// return conn.write(msgs);
 		}
+
+		msgs.addAll(initMessages.get(conn));
+		initMessages.get(conn).clear();
 
 		long eventId = getCurrentEventId();
 
@@ -128,9 +142,13 @@ public class BundleManager implements IBundleService, IFloodlightModule {
 		}
 
 		if (!replicationService.isMaster(swId)) {
-			log.info("BundleManager filtering outgoing messages from slave: "
-					+ OFBundle.getMsgTypes(msgs));
+			// Saim: Reduce Printing.
+			// log.info("BundleManager filtering outgoing messages from slave: "
+			// 		+ OFBundle.getMsgTypes(msgs) + ": " + swId);
 			return Collections.emptyList();
+		} else {
+			// log.info("BundleManager not filtering outgoing messages from master: "
+			// 	+ OFBundle.getMsgTypes(msgs) + ": " + swId);
 		}
 
 		OFBundle currentBundle;
@@ -844,6 +862,8 @@ public class BundleManager implements IBundleService, IFloodlightModule {
 				return new Long(-1);
 			}
 		};
+
+		// initMessages = new ArrayList<OFMessage>();
 	}
 
 	@Override
