@@ -93,8 +93,8 @@ class NetworkX {
     }
 
     public String printGraph() {
-    	String ret = "";
-    	
+        String ret = "";
+        
         for (Map.Entry<String, List<String>> entry : this.graph.entrySet()) {
             ret += (entry.getKey() + ": ");
 
@@ -117,27 +117,27 @@ class NetworkX {
         return ret;
     }
 
-    public void addNode(String name) {
+    public boolean addNode(String name) {
         if (hasNode(name) == false) {
             List<String> temp = new ArrayList<String>();
             this.graph.put(name, temp);
-        } else {
-            System.out.println("NOT POSSIBLE!");
-            // Throw Exception.
+            return true;
         }
+
+        return false;
     }
 
-    public void removeNode(String name) {
+    public boolean removeNode(String name) {
         if (hasNode(name) == true) {
             List<String> copy = new ArrayList<String>(this.graph.get(name));
             for (int i = 0; i < copy.size(); i++) {
                 removeEdge(name, copy.get(i));
             }   
             this.graph.remove(name);
-        } else {
-            System.out.println("NOT POSSIBLE!");
-            // Throw Exception.
+            return true;
         }
+
+        return false;
     }
 
     public boolean hasEdge(String node1, String node2) {
@@ -148,28 +148,28 @@ class NetworkX {
         return this.graph.get(node1).contains(node2) && this.graph.get(node2).contains(node1);
     }
 
-    public void addEdge(String node1, String node2) {
+    public boolean addEdge(String node1, String node2) {
         if (hasNode(node1) == false || hasNode(node2) == false) {
-            // Throw Exception
-            System.out.println("NOT POSSIBLE");
+            return false;
         }
 
         if (hasEdge(node1, node2) != true) {
             this.graph.get(node1).add(node2);
             this.graph.get(node2).add(node1);
-        } else {
-            // System.out.println("Edge already present");
+            return true;
         }
+
+        return false;
     }
 
-    public void removeEdge(String node1, String node2) {
+    public boolean removeEdge(String node1, String node2) {
         if (hasEdge(node1, node2) == true) {
             this.graph.get(node1).remove(node2);
             this.graph.get(node2).remove(node1);
-        } else {
-            // Throw Exception!
-            System.out.println("NOT POSSIBLE!");
+            return true;
         }
+
+        return false;
     }
 
     public boolean hasNode(String name) {
@@ -243,6 +243,7 @@ class NetworkX {
     }
 
     public List<String> Path(String node1, String node2) {
+        if (this.next.get(node1) == null) return null;
         if (this.next.get(node1).get(node2) == "") return null;
 
         List<String> ret = new ArrayList<String>();
@@ -250,6 +251,7 @@ class NetworkX {
 
         while (!node1.equals(node2)) {
             node1 = this.next.get(node1).get(node2);
+            if (node1 == null) return null;
             ret.add(node1);
         }
 
@@ -400,7 +402,8 @@ public class SCL implements IFloodlightModule, IOFSwitchListener {
     // protected ILinkDiscoveryService linkService;
     protected IOFSwitchService switchService;
     protected static Logger logger;
-
+    protected final Object mutex = new Object();
+    protected boolean isStarted;
     protected static List<Integer> EventCount;
 
 
@@ -546,7 +549,7 @@ public class SCL implements IFloodlightModule, IOFSwitchListener {
     public Collection<Class<? extends IFloodlightService>> getModuleDependencies() {
         Collection<Class<? extends IFloodlightService>> l =
             new ArrayList<Class<? extends IFloodlightService>>();
-        l.add(ILinkDiscoveryService.class);
+        // l.add(ILinkDiscoveryService.class);
         l.add(IOFSwitchService.class);
         return l;
     }
@@ -570,6 +573,7 @@ public class SCL implements IFloodlightModule, IOFSwitchListener {
         sw_tables = new HashMap<String, Map<String, Map<String, Link>>>();
         sw_tables_status = new HashMap<String, Map<String, Map<String, String>>>();
         EventCount = new ArrayList<Integer>(6);
+        isStarted = false;
 
         for (int i = 0; i < 6; i++) EventCount.add(0);
 
@@ -577,10 +581,6 @@ public class SCL implements IFloodlightModule, IOFSwitchListener {
         String path = configParameters.get("path");
 
         try {
-            // String fmJson = "{\"switches\": {\"s018\": \"10.0.18.1\", \"s019\": \"10.0.19.1\", \"s012\": \"10.0.12.1\", \"s013\": \"10.0.13.1\", \"s010\": \"10.0.10.1\", \"s011\": \"10.0.11.1\", \"s016\": \"10.0.16.1\", \"s017\": \"10.0.17.1\", \"s014\": \"10.0.14.1\", \"s015\": \"10.0.15.1\", \"s005\": \"10.0.5.1\", \"s004\": \"10.0.4.1\", \"s007\": \"10.0.7.1\", \"s006\": \"10.0.6.1\", \"s001\": \"10.0.1.1\", \"s000\": \"10.0.0.1\", \"s003\": \"10.0.3.1\", \"s002\": \"10.0.2.1\", \"s009\": \"10.0.9.1\", \"s008\": \"10.0.8.1\"}, \"hosts\": {\"h014\": \"10.1.14.1\", \"h008\": \"10.1.8.1\", \"h009\": \"10.1.9.1\", \"h004\": \"10.1.4.1\", \"h005\": \"10.1.5.1\", \"h006\": \"10.1.6.1\", \"h007\": \"10.1.7.1\", \"h000\": \"10.1.0.1\", \"h001\": \"10.1.1.1\", \"h002\": \"10.1.2.1\", \"h003\": \"10.1.3.1\", \"h011\": \"10.1.11.1\", \"h012\": \"10.1.12.1\", \"h013\": \"10.1.13.1\", \"h010\": \"10.1.10.1\", \"h015\": \"10.1.15.1\"}, \"links\": [[\"s011\", \"s011-eth1\", 1, \"s002\", \"s002-eth4\", 4], [\"s005\", \"s005-eth4\", 4, \"s013\", \"s013-eth2\", 2], [\"s007\", \"s007-eth2\", 2, \"s003\", \"s003-eth2\", 2], [\"s009\", \"s009-eth1\", 1, \"s002\", \"s002-eth3\", 3], [\"s006\", \"s006-eth1\", 1, \"s000\", \"s000-eth2\", 2], [\"s010\", \"s010-eth1\", 1, \"s000\", \"s000-eth4\", 4], [\"s017\", \"s017-eth3\", 3, \"h010\", \"h010-eth0\", 1], [\"s011\", \"s011-eth4\", 4, \"s019\", \"s019-eth2\", 2], [\"s005\", \"s005-eth2\", 2, \"s003\", \"s003-eth1\", 1], [\"s007\", \"s007-eth4\", 4, \"s015\", \"s015-eth2\", 2], [\"s011\", \"s011-eth2\", 2, \"s003\", \"s003-eth4\", 4], [\"s008\", \"s008-eth3\", 3, \"s016\", \"s016-eth1\", 1], [\"s008\", \"s008-eth4\", 4, \"s017\", \"s017-eth1\", 1], [\"s008\", \"s008-eth1\", 1, \"s000\", \"s000-eth3\", 3], [\"s010\", \"s010-eth2\", 2, \"s001\", \"s001-eth4\", 4], [\"s004\", \"s004-eth1\", 1, \"s000\", \"s000-eth1\", 1], [\"s015\", \"s015-eth3\", 3, \"h006\", \"h006-eth0\", 1], [\"s010\", \"s010-eth4\", 4, \"s019\", \"s019-eth1\", 1], [\"s009\", \"s009-eth4\", 4, \"s017\", \"s017-eth2\", 2], [\"s014\", \"s014-eth4\", 4, \"h005\", \"h005-eth0\", 1], [\"s006\", \"s006-eth4\", 4, \"s015\", \"s015-eth1\", 1], [\"s005\", \"s005-eth3\", 3, \"s012\", \"s012-eth2\", 2], [\"s005\", \"s005-eth1\", 1, \"s002\", \"s002-eth1\", 1], [\"s014\", \"s014-eth3\", 3, \"h004\", \"h004-eth0\", 1], [\"s011\", \"s011-eth3\", 3, \"s018\", \"s018-eth2\", 2], [\"s013\", \"s013-eth3\", 3, \"h002\", \"h002-eth0\", 1], [\"s004\", \"s004-eth3\", 3, \"s012\", \"s012-eth1\", 1], [\"s016\", \"s016-eth4\", 4, \"h009\", \"h009-eth0\", 1], [\"s018\", \"s018-eth4\", 4, \"h013\", \"h013-eth0\", 1], [\"s008\", \"s008-eth2\", 2, \"s001\", \"s001-eth3\", 3], [\"s006\", \"s006-eth3\", 3, \"s014\", \"s014-eth1\", 1], [\"s009\", \"s009-eth2\", 2, \"s003\", \"s003-eth3\", 3], [\"s019\", \"s019-eth3\", 3, \"h014\", \"h014-eth0\", 1], [\"s004\", \"s004-eth2\", 2, \"s001\", \"s001-eth1\", 1], [\"s006\", \"s006-eth2\", 2, \"s001\", \"s001-eth2\", 2], [\"s010\", \"s010-eth3\", 3, \"s018\", \"s018-eth1\", 1], [\"s009\", \"s009-eth3\", 3, \"s016\", \"s016-eth2\", 2], [\"s012\", \"s012-eth3\", 3, \"h000\", \"h000-eth0\", 1], [\"s012\", \"s012-eth4\", 4, \"h001\", \"h001-eth0\", 1], [\"s018\", \"s018-eth3\", 3, \"h012\", \"h012-eth0\", 1], [\"s007\", \"s007-eth1\", 1, \"s002\", \"s002-eth2\", 2], [\"s004\", \"s004-eth4\", 4, \"s013\", \"s013-eth1\", 1], [\"s007\", \"s007-eth3\", 3, \"s014\", \"s014-eth2\", 2], [\"s017\", \"s017-eth4\", 4, \"h011\", \"h011-eth0\", 1]], \"ctrls\": [\"h003\", \"h007\", \"h008\", \"h015\"]}";
-            // String fmJson = "{\"switches\": {\"s004\": \"10.0.1.1\",\"s002\": \"10.0.0.1\",\"s003\": \"10.0.3.1\",\"s001\": \"10.0.2.1\"},\"hosts\": {\"h004\": \"10.0.0.5\",\"h005\": \"10.0.0.6\",\"h006\": \"10.0.0.7\",\"h007\": \"10.0.0.8\",\"h000\": \"10.0.0.1\",\"h001\": \"10.0.0.2\",\"h002\": \"10.0.0.3\",\"h003\": \"10.0.0.4\"},\"links\": [[\"s001\",\"s001-eth1\",2,\"s002\",\"s002-eth1\",2],[\"s001\",\"s001-eth2\",3,\"s003\",\"s003-eth1\",2],[\"s001\",\"s001-eth3\",4,\"s004\",\"s004-eth1\",2],[\"s002\",\"s002-eth2\",3,\"s003\",\"s003-eth2\",4],[\"s002\",\"s002-eth3\",4,\"s004\",\"s004-eth2\",3],[\"s003\",\"s003-eth3\",4,\"s004\",\"s004-eth3\",4],[\"s001\",\"s001-eth4\",5,\"h000\",\"h000-eth0\",2],[\"s001\",\"s001-eth5\",6,\"h001\",\"h001-eth0\",1],[\"s002\",\"s002-eth4\",5,\"h002\",\"h002-eth0\",1],[\"s003\",\"s003-eth4\",5,\"h004\",\"h004-eth0\",1],[\"s003\",\"s003-eth5\",6,\"h005\",\"h005-eth0\",1],[\"s004\",\"s004-eth4\",5,\"h006\",\"h006-eth0\",1]],\"ctrls\": [\"h003\",\"h007\"]}";
-            // String fmJson = new String(Files.readAllBytes(Paths.get("/home/saimsalman/Desktop/SCL/Original/conf/fattree_inband.json")));
-            // String fmJson = new String(Files.readAllBytes(Paths.get("/home/saimsalman/Desktop/SCL/Original/conf/fattree_outband.json")));
             String fmJson = new String(Files.readAllBytes(Paths.get(path)));
             loadTopology(fmJson);    
         } catch (IOException e) {
@@ -640,64 +640,62 @@ public class SCL implements IFloodlightModule, IOFSwitchListener {
                                   PortChangeType type,
                                   FloodlightContext context) {
 
-        // String swID = switchID_to_string(switchId);
-        // Link lnk = intf2link.get(swID + ':' + port.getName());
+        String swID = switchID_to_string(switchId);
+        Link lnk = intf2link.get(swID + ':' + port.getName());
+        boolean topoUpdated = false;
 
-        // if (lnk == null) return;
+        if (lnk == null) return;
 
-        // logger.info("Port-" + type.toString() + ": " + swID + ':' + port.getName());
+        logger.info("Port-" + type.toString() + ": " + swID + ':' + port.getName());
 
-        // String sw1 = lnk.sw1;
-        // String sw2 = lnk.sw2;
+        String sw1 = lnk.sw1;
+        String sw2 = lnk.sw2;
 
-        // if (type == PortChangeType.UP || type == PortChangeType.ADD) {
-        //     EventCount.set(2, EventCount.get(2) + 1);
+        if (type == PortChangeType.UP || type == PortChangeType.ADD) {
+            EventCount.set(2, EventCount.get(2) + 1);
 
-        //     if (sw1.equals(swID)) {
-        //         lnk.state1 = 512;
+            if (sw1.equals(swID)) {
+                lnk.state1 = 512;
 
-        //         if (lnk.state2 == 1) {
-        //             return;
-        //         } else {
-        //             networkGraph.addEdge(sw1, sw2);
-        //             updateFlowEntries(calShortestRoute());
-        //         }
-        //     } else if (sw2.equals(swID)) {
-        //         lnk.state2 = 512;
+                if (lnk.state2 == 1) {
+                    return;
+                } else {
+                    topoUpdated = networkGraph.addEdge(sw1, sw2);
+                }
+            } else if (sw2.equals(swID)) {
+                lnk.state2 = 512;
 
-        //         if (lnk.state1 == 1) {
-        //             return;
-        //         } else {
-        //             networkGraph.addEdge(sw1, sw2);
-        //             updateFlowEntries(calShortestRoute());
-        //         }
-        //     }
-        // }
+                if (lnk.state1 == 1) {
+                    return;
+                } else {
+                    topoUpdated = networkGraph.addEdge(sw1, sw2);
+                }
+            }
+        }
 
-        // if (type == PortChangeType.DOWN || type == PortChangeType.DELETE) {
-        //     EventCount.set(3, EventCount.get(3) + 1);
+        if (type == PortChangeType.DOWN || type == PortChangeType.DELETE) {
+            EventCount.set(3, EventCount.get(3) + 1);
 
-        //     if (sw1.equals(swID)) {
-        //         lnk.state1 = 1;
+            if (sw1.equals(swID)) {
+                lnk.state1 = 1;
 
-        //         if (lnk.state2 == 1) {
-        //             return;
-        //         } else {
-        //             networkGraph.removeEdge(sw1, sw2);
-        //             updateFlowEntries(calShortestRoute());
-        //         }
-        //     } else if (sw2.equals(swID)) {
-        //         lnk.state2 = 1;
+                if (lnk.state2 == 1) {
+                    return;
+                } else {
+                    topoUpdated = networkGraph.removeEdge(sw1, sw2);
+                }
+            } else if (sw2.equals(swID)) {
+                lnk.state2 = 1;
 
-        //         if (lnk.state1 == 1) {
-        //             return;
-        //         } else {
-        //             networkGraph.removeEdge(sw1, sw2);
-        //             updateFlowEntries(calShortestRoute());
-        //         }
-        //     }
-        // }
+                if (lnk.state1 == 1) {
+                    return;
+                } else {
+                    topoUpdated = networkGraph.removeEdge(sw1, sw2);
+                }
+            }
+        }
 
+        if (topoUpdated == true && isStarted == true) updateFlowEntries(calShortestRoute());
         logger.info("Event Count: " + EventCount.toString());
     }
 
@@ -943,7 +941,8 @@ public class SCL implements IFloodlightModule, IOFSwitchListener {
             if (swName.equals(lnk.sw1)) lnk.state1 = 1;
             if (swName.equals(lnk.sw2)) lnk.state2 = 1; // TODO: REPLACE THESE NUMBERS WITH FLOODLLIGHT CONSTS.
         }
-        updateFlowEntries(calShortestRoute());
+
+        if (isStarted == true) updateFlowEntries(calShortestRoute());
 
         logger.info("Event Count: " + EventCount.toString());
     }
@@ -973,12 +972,12 @@ public class SCL implements IFloodlightModule, IOFSwitchListener {
 
         // logger.info("Switch Added -- Now using the ports to update flow entries.");
 
-
-
         Collection<OFPort> portCollection = sw.getEnabledPortNumbers();
+        boolean topoUpdates = false;
 
         for (OFPort port : portCollection) {
-            // logger.info("PORT -- PORT: " + port.toString());
+            EventCount.set(2, EventCount.get(2) + 1);
+            // logger.info("Switch Port-ADD");
             // linkService.AddToSuppressLLDPs(switchId, port);
 
             String swID = switchID_to_string(switchId);
@@ -1003,58 +1002,42 @@ public class SCL implements IFloodlightModule, IOFSwitchListener {
 
             if (sw1.equals(swID)) {
                 lnk.state1 = 512;
-
-                if (lnk.state2 == 512) {
-                    this.networkGraph.addEdge(sw1, sw2);
-                } else {
-                    logger.info("WAIT FOR OTHER PORT.");
-                }
+                if (lnk.state2 == 512) this.networkGraph.addEdge(sw1, sw2);
+                topoUpdates = true;
             } else if (sw2.equals(swID)) {
                 lnk.state2 = 512;
-
-                if (lnk.state1 == 512) {
-                    this.networkGraph.addEdge(sw1, sw2);
-                } else {
-                    logger.info("WAIT FOR OTHER PORT.");
-                }
+                if (lnk.state1 == 512) this.networkGraph.addEdge(sw1, sw2);
+                topoUpdates = true;
             }
         }
 
-
-        updateFlowEntries(calShortestRoute());
-
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Thread.sleep(100);
-                    RandomFlow(swName);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }).start();
+        if (topoUpdates == true && isStarted == true) updateFlowEntries(calShortestRoute());
+        logger.info("Event Count: " + EventCount.toString());
     }
 
  
     @Override
     public void startUp(FloodlightModuleContext context) {
         // linkService.addListener(this);
-    	logger.info("STARTUP");
+        logger.info("STARTUP");
 
 
-        switchService.addOFSwitchListener(this);
+        switchService.addOFSwitchListener(this); 
 
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    logger.info("THIS THREAD IS GOING TO SLEEP...");
-                    Thread.sleep(60000);
-                    logger.info("THIS THREAD IS GOING TO CALL A FUNCTION WHICH WILL ADD FLOWS...");
-                    updateFlowEntries(calShortestRoute());
+                	synchronized (mutex) {
+	                    logger.info("GOING TO SLEEP ...");
+	                    Thread.sleep(60000);
+	                    logger.info("ADDING FLOWS ...");
+	                    updateFlowEntries(calShortestRoute());
+	                }	
+	                isStarted = true;
                 } catch (Exception e) {
                     e.printStackTrace();
+                    isStarted = true;
                 }
             }
         }).start();
